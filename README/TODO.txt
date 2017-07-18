@@ -1,0 +1,12 @@
+RABI GUI TO DO:
+- force pulseblaster to shut down after measurement AND set output pins to zero (not guaranteed by pb_stop())... put in Hardware.m?
+- check counts/photon calculation
+- update physical layout of GUI
+- test clock speed in program (almost positive it is 100 MHz)
+- MATLAB gets fatal error upon pb_stop() in command line... why?
+- add options for exporting graphs, data, etc.
+- upload to GitHub
+
+EXTRA STUFF
+- show integration region by plotting box on image
+- add image to gui instead of creating new figures

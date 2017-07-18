@@ -1,6 +1,5 @@
 RABI GUI TO DO:
 - force pulseblaster to shut down after measurement AND set output pins to zero (not guaranteed by pb_stop())... put in Hardware.m?
-- check counts/photon calculation
 - update physical layout of GUI
 - test clock speed in program (almost positive it is 100 MHz)
 - MATLAB gets fatal error upon pb_stop() in command line... why?

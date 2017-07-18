@@ -19,7 +19,6 @@ classdef Hardware < handle
         rf_power            % RF power in dBm
         ccd_size            % image resolution
         capture_taken       % boolean flag; '1' if a picture was taken with this initialized object
-        last_image          % saved last image
     end
     
     methods
@@ -34,6 +33,10 @@ classdef Hardware < handle
             if obj.is_initialized
                 error('hardware is already initialized')
             end
+            
+            
+            %% ENSURE OLD VIDEO OBJECTS ARE DELETED
+            delete(imaqfind)
             
             
             %% SET OBJECT FIELDS

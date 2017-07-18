@@ -86,7 +86,7 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     % display integration region
     rw = 2 * REGION_WIDTH;
     rectangle('Position',[x0 - REGION_WIDTH, y0 - REGION_WIDTH, rw, rw],...
-     'LineWidth',2, 'Color', 'red')
+     'LineWidth', 2, 'EdgeColor', 'red')
     hold off
     
     %% CALCULATE BACKGROUND COUNTS
@@ -111,7 +111,6 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     % calculate background count rate to compensate for pulsed experiments
     % to follow
     bg_count_rate = average_counts(bg_image, x0, y0) / total_t_laser;
-    
 
     
     %% RUN PULSED SEQUENCES

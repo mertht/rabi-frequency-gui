@@ -61,7 +61,7 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     %% CALCULATE RF OFF COUNTS
     pb_start_programming('PULSE_PROGRAM'); % get pb ready
     pb_inst_pbonly(LASER_ON, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 1000); % zero pins after completions
     pb_stop_programming();
 
     disp('initializing RF off counts measurement')
@@ -75,7 +75,7 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     % plot image
     figure
     imagesc(rf_off_image)
-    image_title = strcat('RF Off Image');
+    image_title = strcat('RF Off Image - see integration region');
     title(image_title)
     hold on
 
@@ -92,7 +92,7 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     %% CALCULATE BACKGROUND COUNTS
     pb_start_programming('PULSE_PROGRAM'); % get pb ready
     pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 1000); % zero pins after completions
     pb_stop_programming();
 
     disp('initializing background counts measurement')
@@ -125,7 +125,7 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
         
         start_laser = pb_inst_pbonly(LASER_ON, 'LOOP', cycles, t_laser); % turn laser pulse on, rf off
         pb_inst_pbonly(RF_ON, 'END_LOOP', start_laser, t_rf); % turn rf pulse on, laser off
-        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
+        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 1000); % zero pins after completions
         pb_stop_programming();
         
         

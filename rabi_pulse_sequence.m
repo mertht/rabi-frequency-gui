@@ -23,6 +23,7 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     global LASER_ON;
     global RF_ON;
     global ALL_OFF;
+    global REGION_WIDTH;
     
     
     %% GET USER PARAMETERS
@@ -76,9 +77,17 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     imagesc(rf_off_image)
     image_title = strcat('RF Off Image');
     title(image_title)
-    
+    hold on
+
+    % determine inegration parameters then integrate to get average counts for RF off signal
     [x0, y0] = get_center(rf_off_image);
-    rf_off_counts = average_counts(rf_off_image, x0, y0); 
+    rf_off_counts = average_counts(rf_off_image, x0, y0);
+    
+    % display integration region
+    rw = 2 * REGION_WIDTH;
+    rectangle('Position',[x0 - REGION_WIDTH, y0 - REGION_WIDTH, rw, rw],...
+     'LineWidth',2, 'Color', 'red')
+    hold off
     
     %% CALCULATE BACKGROUND COUNTS
     pb_start_programming('PULSE_PROGRAM'); % get pb ready

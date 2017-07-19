@@ -58,8 +58,13 @@ classdef Hardware < handle
                 obj.rf_sweeper = obj.rf_sweeper(1);
             end
 
-            fopen(obj.rf_sweeper);    %% Connect to rf generator object, obj.rf_sweeper. 
-            set(obj.rf_sweeper, 'Timeout', 2);
+            
+            try
+                fopen(obj.rf_sweeper);    %% Connect to rf generator object, obj.rf_sweeper. 
+            catch ME
+                error('turn on the RF sweeper!')
+            end
+                set(obj.rf_sweeper, 'Timeout', 2);
 
             fprintf(obj.rf_sweeper, 'PS0');                              % Sets power sweep mode off
             fprintf(obj.rf_sweeper, 'CW %d GZ', obj.rf_frequency);           % Sets CW frequency 
@@ -86,7 +91,14 @@ classdef Hardware < handle
 
             
             %% INITIALIZE VIDEO OBJECT
-            obj.vid                     = videoinput('hamamatsu', 1, imagingMode);
+            try
+                obj.vid                     = videoinput('hamamatsu', 1, imagingMode);
+            catch ME
+                error('turn on Hamamatsu camera!')
+            end
+            
+            
+                
             src                         = getselectedsource(obj.vid);
             MAX_EXPOSURE_TIME           = 1;
 

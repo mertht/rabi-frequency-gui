@@ -24,7 +24,7 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     global RF_ON;
     global ALL_OFF;
     global REGION_WIDTH;
-    
+    global CAMERA_DELAY;
     
     %% GET USER PARAMETERS
     
@@ -41,6 +41,14 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     binning_index = get(handles.binning,'Value');
     ccd_size_index = get(handles.ccd_size,'Value');
     rf_durations = linspace(t_rf_min, t_rf_max, samples);
+    
+    
+    % calculate delay through fiber optic cable and combine with camera
+    % delay
+    cable_length = 15; % in meters
+    index_of_refraction = 1.44;
+    eff_light_speed = 2.997 * 10^8 / index_of_refraction; % in m/s
+    time_delay = cable_length / eff_light_speed * 10^(9) + CAMERA_DELAY; % in ns
     
     
     % check parameters
@@ -60,8 +68,9 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     
     %% CALCULATE RF OFF COUNTS
     pb_start_programming('PULSE_PROGRAM'); % get pb ready
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, time_delay); % account for time delay (fiber optic + camera launch)
     pb_inst_pbonly(LASER_ON, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 1000); % zero pins after completions
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
     pb_stop_programming();
 
     disp('initializing RF off counts measurement')
@@ -91,8 +100,9 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     
     %% CALCULATE BACKGROUND COUNTS
     pb_start_programming('PULSE_PROGRAM'); % get pb ready
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, time_delay); % account for time delay (fiber optic + camera launch)
     pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 1000); % zero pins after completions
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
     pb_stop_programming();
 
     disp('initializing background counts measurement')
@@ -120,14 +130,15 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
   
     % for each rf duration, generate looped pulses of both laser and RF
     for d = 1:length(rf_durations)
-        pb_start_programming('PULSE_PROGRAM'); % get pb ready
+        
         t_rf = rf_durations(d); % length of rf pulse in ns
         
+        pb_start_programming('PULSE_PROGRAM'); % get pb ready        
+        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, time_delay); % account for time delay (fiber optic + camera launch)   
         start_laser = pb_inst_pbonly(LASER_ON, 'LOOP', cycles, t_laser); % turn laser pulse on, rf off
         pb_inst_pbonly(RF_ON, 'END_LOOP', start_laser, t_rf); % turn rf pulse on, laser off
-        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 1000); % zero pins after completions
+        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
         pb_stop_programming();
-        
         
         exposure_time = cycles * (t_laser + t_rf); % total exposure time for this experiment
         bg_counts = bg_count_rate * exposure_time; % need to subtract this off after getting average counts

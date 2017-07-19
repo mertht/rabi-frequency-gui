@@ -21,22 +21,10 @@ function rabi_frequency_exe()
     global SPINAPI_DLL_NAME;
     global SPINAPI_DLL_PATH;
     global EXPORTED_DATA_PATH;
-    global CLOCK_FREQ;
-    global LASER_ON;
-    global RF_ON;
-    global ALL_OFF;
     global REGION_WIDTH;
-    global CAMERA_DELAY;
 
     % set measurement constants
     REGION_WIDTH = 18;  % 1/2 length of integration region: total region is 36 x 36, ~ 1 um x 1 um
-    CLOCK_FREQ = 100;   % this specific model of Pulseblaster (SP17) has 100 MHz clock freq.
-    CAMERA_DELAY = 3;   % delay between start of Pulseblaster pulses and camera shutter opening (ns)
-    
-    % set pulseblaster pins (refer to Pulseblaster API in README folder)
-    ALL_OFF = '0';      % hex pin for rf output pulse
-    LASER_ON = '1';     % hex pin for laser output pulse (pin 0)
-    RF_ON = '2';        % hex pin for rf output pulse (pin 1)
 
     % set paths
     SPINAPI_DLL_PATH = 'C:\SpinCore\SpinAPI\lib\';

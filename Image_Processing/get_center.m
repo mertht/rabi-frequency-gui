@@ -24,4 +24,17 @@ function [x0, y0] = get_center(background_image)
         error('invalid integration region. check image.')
     end
 
+    % plot image
+    figure
+    imagesc(background_image)
+    image_title = strcat('RF Off Image - see integration region');
+    title(image_title)
+    hold on
+    
+    % display integration region
+    rw = 2 * REGION_WIDTH;
+    rectangle('Position',[x0 - REGION_WIDTH, y0 - REGION_WIDTH, rw, rw],...
+     'LineWidth', 2, 'EdgeColor', 'red')
+    hold off
+    
 end

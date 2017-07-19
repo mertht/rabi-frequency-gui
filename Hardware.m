@@ -19,6 +19,26 @@ classdef Hardware < handle
         rf_power            % RF power in dBm
         ccd_size            % image resolution
         capture_taken       % boolean flag; '1' if a picture was taken with this initialized object
+        laser_response      % time delay between Pulseblaster signal and laser response at table
+    end
+    
+    properties (Constant)
+        CAMERA_DELAY = 10;  % delay between start of Pulseblaster pulses and camera shutter opening (ns)
+        SPEED_OF_LIGHT = 2.997 * 10^8; % empirical constant
+        INDEX_OF_REFRACTION = 1.44; % index of refraction in fiber optic cable
+        CABLE_LENGTH = 32; % length of fiber optic cable (to AOM) in meters
+        
+        % Hamamatsu camera constants (from model)
+        DARK_OFFSET = 100; % hamamatsu dark offset: 100 extra counts each time a picture is taken
+        CONVERSION_FACTOR = 0.46; % hamamatsu average photons/count
+        
+        % Hex flags corresponding to Pulseblaster output
+        ALL_OFF = '0';      % hex pin for rf output pulse
+        LASER_ON = '1';     % hex pin for laser output pulse (pin 0)
+        RF_ON = '2';        % hex pin for rf output pulse (pin 1)
+        
+        CORE_CLOCK = 100;   % this specific model of Pulseblaster (SP17) has 100 MHz clock freq.
+        MIN_INSTR_LENGTH = 10; % minimum allowed instruction length of Pulseblaster (ns)
     end
     
     methods
@@ -38,12 +58,12 @@ classdef Hardware < handle
             %% ENSURE OLD VIDEO OBJECTS ARE DELETED
             delete(imaqfind)
             
-            
             %% SET OBJECT FIELDS
+            % see "Properties" for description of fields
             obj.exposure_time_sec = exposure_time * 10^(-9);
             obj.rf_frequency = rf_frequency;
             obj.rf_power = rf_power;
-            
+            obj.laser_response = Hardware.CABLE_LENGTH / (Hardware.SPEED_OF_LIGHT / Hardware.INDEX_OF_REFRACTION) * 10^9;
             
             %% SET UP RF SWEEPER
 
@@ -136,10 +156,28 @@ classdef Hardware < handle
             ch.InitialDelay                        = daq_camera_trigger_inital_delay;
             ch.Frequency                           = daq_camera_trigger_frequency;
             ch.DutyCycle                           = daq_camera_trigger_duty_cycle;
-            
             obj.is_initialized                     = 1;
+            
+            
+            %% INITIALIZE PULSEBLASTER
+            
+            pb_close(); % ensure pb is already closed
+            pb_init(); % initialize
+            pb_core_clock(Hardware.CORE_CLOCK); % set core clock speed
         end
         
+
+        function statuses = program_pb_constant(pins, t_laser)
+            if not(is_initialized)
+                error('must initialize hardware before programming Pulseblaster')
+            end
+            
+            pb_start_programming('PULSE_PROGRAM'); % get pb ready
+            pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, Hardware.TIME_DELAY); % account for time delay (fiber optic + camera launch)
+            pb_inst_pbonly(pins, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
+            pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
+            pb_stop_programming();
+        end
         
         
         function image = capture(obj)
@@ -201,11 +239,10 @@ classdef Hardware < handle
                 error('Hardware is not initialized')
             end
                 
-            % delete hamamatsu video object
+            %% KILL HAMAMATSU CAMERA
             delete(obj.vid)
 
-            % clear daq
-            % clear daq
+            %% KILL DAQ AND RF SWEEPER
             obj.s.release; % release the daq instance
             delete(obj.s) % delete the daq instance
 
@@ -216,6 +253,23 @@ classdef Hardware < handle
             fclose(obj.rf_sweeper);             % close 
             delete(obj.rf_sweeper);             % delete
             obj.is_initialized = 0;
+            
+            %% KILL PULSEBLASTER
+            pb_stop();
+            pb_close();
+            
         end
+    end
+    
+    methods(Static)
+        
+        function photons = counts2photons(camera_counts, rf_off_counts)
+            % converts counts (from Hamamatsu camera) to photons
+            % camera counts: number of counts over integration region
+            % rf_off_counts: measured counts during laser excitation integration with RF off
+                actual_counts = camera_counts - (Hardware.DARK_OFFSET + rf_off_counts);
+                photons = actual_counts * Hardware.CONVERSION_FACTOR;
+        end
+        
     end
 end

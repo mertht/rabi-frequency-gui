@@ -19,12 +19,10 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     %       _______|'''|______|'''|______|'''|
     
     % get constants
-    global CLOCK_FREQ;
-    global LASER_ON;
-    global RF_ON;
-    global ALL_OFF;
+    LASER_ON = Hardware.LASER_ON;
+    RF_ON = Hardware.RF_ON;
+    ALL_OFF = Hardware.ALL_OFF;
     global REGION_WIDTH;
-    global CAMERA_DELAY;
     
     %% GET USER PARAMETERS
     
@@ -41,15 +39,8 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     binning_index = get(handles.binning,'Value');
     ccd_size_index = get(handles.ccd_size,'Value');
     rf_durations = linspace(t_rf_min, t_rf_max, samples);
-    
-    
-    % calculate delay through fiber optic cable and combine with camera
-    % delay
-    cable_length = 15; % in meters
-    index_of_refraction = 1.44;
-    eff_light_speed = 2.997 * 10^8 / index_of_refraction; % in m/s
-    time_delay = cable_length / eff_light_speed * 10^(9) + CAMERA_DELAY; % in ns
-    
+    total_t_laser = cycles * t_laser; % exposure time for background image
+
     
     % check parameters
     if t_rf_min >= t_rf_max
@@ -58,55 +49,40 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
         error('number of cycles must be a positive integer')
     end
     
-    % initialize pulseblaster
-    pb_init();
-    
-    % set clock frequency of board and start programming
-    pb_core_clock(CLOCK_FREQ);
-    total_t_laser = cycles * t_laser; % exposure time for background image
-    
     
     %% CALCULATE RF OFF COUNTS
-    pb_start_programming('PULSE_PROGRAM'); % get pb ready
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, time_delay); % account for time delay (fiber optic + camera launch)
-    pb_inst_pbonly(LASER_ON, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
-    pb_stop_programming();
-
     disp('initializing RF off counts measurement')
     hardware = Hardware;
     hardware.init(binning_index, ccd_size_index, total_t_laser, rf_frequency, rf_power);
+    
+    pb_start_programming('PULSE_PROGRAM'); % get pb ready
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, hardware.laser_response); % account for time delay (fiber optic + camera launch)
+    pb_inst_pbonly(LASER_ON, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
+    pb_stop_programming();    
+    
     disp('running RF off counts measurement')
     rf_off_image = hardware.capture();
     disp('killing RF off counts measurement')
     hardware.kill();
     
-    % plot image
-    figure
-    imagesc(rf_off_image)
-    image_title = strcat('RF Off Image - see integration region');
-    title(image_title)
-    hold on
-
+    
     % determine inegration parameters then integrate to get average counts for RF off signal
     [x0, y0] = get_center(rf_off_image);
     rf_off_counts = average_counts(rf_off_image, x0, y0);
     
-    % display integration region
-    rw = 2 * REGION_WIDTH;
-    rectangle('Position',[x0 - REGION_WIDTH, y0 - REGION_WIDTH, rw, rw],...
-     'LineWidth', 2, 'EdgeColor', 'red')
-    hold off
-    
     %% CALCULATE BACKGROUND COUNTS
-    pb_start_programming('PULSE_PROGRAM'); % get pb ready
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, time_delay); % account for time delay (fiber optic + camera launch)
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
-    pb_stop_programming();
+
 
     disp('initializing background counts measurement')
     hardware.init(binning_index, ccd_size_index, total_t_laser, rf_frequency, rf_power);
+    
+    pb_start_programming('PULSE_PROGRAM'); % get pb ready
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, hardware.laser_response); % account for time delay (fiber optic + camera launch)
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
+    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
+    pb_stop_programming();
+    
     disp('running background counts measurement')
     bg_image = hardware.capture();
     disp('killing background counts measurement')
@@ -118,8 +94,7 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     image_title = strcat('Background Image');
     title(image_title)
     
-    % calculate background count rate to compensate for pulsed experiments
-    % to follow
+    % calculate background count rate to compensate for pulsed experiments to follow
     bg_count_rate = average_counts(bg_image, x0, y0) / total_t_laser;
 
     
@@ -131,28 +106,28 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     % for each rf duration, generate looped pulses of both laser and RF
     for d = 1:length(rf_durations)
         
-        t_rf = rf_durations(d); % length of rf pulse in ns
-        
-        pb_start_programming('PULSE_PROGRAM'); % get pb ready        
-        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, time_delay); % account for time delay (fiber optic + camera launch)   
-        start_laser = pb_inst_pbonly(LASER_ON, 'LOOP', cycles, t_laser); % turn laser pulse on, rf off
-        pb_inst_pbonly(RF_ON, 'END_LOOP', start_laser, t_rf); % turn rf pulse on, laser off
-        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
-        pb_stop_programming();
-        
+        t_rf = rf_durations(d); % length of rf pulse in ns        
         exposure_time = cycles * (t_laser + t_rf); % total exposure time for this experiment
         bg_counts = bg_count_rate * exposure_time; % need to subtract this off after getting average counts
+        
         disp('initializing pulse sequence')
-
         % initialize hardware setup
         hardware = Hardware;
         hardware.init(binning_index, ccd_size_index, exposure_time, rf_frequency, rf_power);
         disp('running pulse sequence')
+        
+        % program pb
+        pb_start_programming('PULSE_PROGRAM'); % get pb ready        
+        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, hardware.laser_response); % account for time delay (fiber optic + camera launch)   
+        start_laser = pb_inst_pbonly(LASER_ON, 'LOOP', cycles, t_laser); % turn laser pulse on, rf off
+        pb_inst_pbonly(RF_ON, 'END_LOOP', start_laser, t_rf); % turn rf pulse on, laser off
+        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
+        pb_stop_programming();
 
         % run pulsed sequence and gather image
         image = hardware.capture();
         diff_counts = average_counts(image, x0, y0) - bg_counts; % number of counts above bg_counts
-        pl_array(d) = counts2photons(diff_counts, rf_off_counts); % add data sample to data array
+        pl_array(d) = Hardware.counts2photons(diff_counts, rf_off_counts); % add data sample to data array
         image_array(:,:,d) = image; % add image to image array
         
         % plot image
@@ -164,9 +139,5 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
         disp('killing pulse sequence')
         hardware.kill();
     end
-    
-    
-    pb_stop();
-    pb_close(); % close the pulseblaster
 
 end

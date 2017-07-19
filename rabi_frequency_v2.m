@@ -88,6 +88,7 @@ function start_Callback(hObject, eventdata, handles)
     [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles);
     
     % save data and images to .mat files
+    
     save(strcat(EXPORTED_DATA_PATH, 'image_array.mat'), 'image_array');
     save(strcat(EXPORTED_DATA_PATH, 'rf_durations.mat'), 'rf_durations');
     save(strcat(EXPORTED_DATA_PATH, 'pl_array.mat'), 'pl_array');

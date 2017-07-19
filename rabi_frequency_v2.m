@@ -116,6 +116,8 @@ function start_Callback(hObject, eventdata, handles)
     save(strcat(EXPORTED_DATA_PATH, 'pl_array.mat'), 'pl_array');
 
     process_rabi_data(handles);
+    disp('')
+    disp('DONE')
     
     
 function process_rabi_data(handles)

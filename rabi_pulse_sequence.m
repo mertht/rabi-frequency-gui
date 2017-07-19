@@ -128,9 +128,13 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
         
         % add point to sinusoid plot in GUI
         x_limits = [rf_durations(1), rf_durations(end)];
+        axes(handles.sinusoid);
+        plot(handles.sinusoid, rf_durations(1:d), pl_array(1:d)); % refresh plot with new data point
         set(handles.sinusoid, 'XLimMode', 'manual');
         set(handles.sinusoid, 'Xlim', x_limits);
-        plot(handles.sinusoid, rf_durations(1:d), pl_array(1:d)); % refresh plot with new data point
+        title('Rabi Oscillation')
+        xlabel('RF Pulse Duration (ns)')
+        ylabel('Normalized PL (arb.)')
         
         % plot image
 %         figure

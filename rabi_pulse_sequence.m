@@ -29,6 +29,9 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     rf_frequency = getN(handles.rf_frequency);
     rf_power = getN(handles.rf_power);
     
+    
+    
+    
     % get binning/imaging parameters
     binning_index = get(handles.binning,'Value');
     ccd_size_index = get(handles.ccd_size,'Value');
@@ -42,6 +45,10 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     elseif cycles < 1
         error('number of cycles must be a positive integer')
     end
+    
+    
+    %% SET UP GUI
+
     
     
     %% CALCULATE RF OFF COUNTS
@@ -62,7 +69,7 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     
     
     % determine inegration parameters then integrate to get average counts for RF off signal
-    [x0, y0] = get_center(rf_off_image);
+    [x0, y0] = get_center(rf_off_image, handles);
     rf_off_counts = average_counts(rf_off_image, x0, y0);
     
     %% CALCULATE BACKGROUND COUNTS
@@ -81,12 +88,6 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     bg_image = hardware.capture();
     disp('killing background counts measurement')
     hardware.kill();
-    
-    % plot image
-    figure
-    imagesc(bg_image)
-    image_title = strcat('Background Image');
-    title(image_title)
     
     % calculate background count rate to compensate for pulsed experiments to follow
     bg_count_rate = average_counts(bg_image, x0, y0) / total_t_laser;
@@ -124,11 +125,18 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
         pl_array(d) = Hardware.counts2photons(diff_counts, rf_off_counts); % add data sample to data array
         image_array(:,:,d) = image; % add image to image array
         
+        
+        % add point to sinusoid plot in GUI
+        x_limits = [rf_durations(1), rf_durations(end)];
+        set(handles.sinusoid, 'XLimMode', 'manual');
+        set(handles.sinusoid, 'Xlim', x_limits);
+        plot(handles.sinusoid, rf_durations(1:d), pl_array(1:d)); % refresh plot with new data point
+        
         % plot image
-        figure
-        imagesc(image)
-        image_title = strcat('RF Pulse =  ', num2str(t_rf), ' ns');
-        title(image_title)
+%         figure
+%         imagesc(image)
+%         image_title = strcat('RF Pulse =  ', num2str(t_rf), ' ns');
+%         title(image_title)
         
         disp('killing pulse sequence')
         hardware.kill();

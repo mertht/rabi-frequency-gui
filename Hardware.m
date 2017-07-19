@@ -145,11 +145,11 @@ classdef Hardware < handle
             daq_rate                               = 50000; % daq read/write rate
             daq_duration                           = kinTime; % time daq is on
 
-            % % print settings to daq instance
+            % print settings to daq instance
             obj.s.Rate                             = daq_rate;
             obj.s.DurationInSeconds                = daq_duration;
 
-            % % set up camera trigger
+            % set up camera trigger
             ch                                     = obj.s.Channels(1);
             ch.InitialDelay                        = daq_camera_trigger_inital_delay;
             ch.Frequency                           = daq_camera_trigger_frequency;
@@ -163,19 +163,7 @@ classdef Hardware < handle
             pb_init(); % initialize
             pb_core_clock(Hardware.CORE_CLOCK); % set core clock speed
         end
-        
 
-        function statuses = program_pb_constant(pins, t_laser)
-            if not(is_initialized)
-                error('must initialize hardware before programming Pulseblaster')
-            end
-            
-            pb_start_programming('PULSE_PROGRAM'); % get pb ready
-            pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, Hardware.TIME_DELAY); % account for time delay (fiber optic + camera launch)
-            pb_inst_pbonly(pins, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
-            pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
-            pb_stop_programming();
-        end
         
         
         function image = capture(obj)

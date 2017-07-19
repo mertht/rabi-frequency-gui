@@ -24,12 +24,12 @@ function [fit, freq] = fit_sinusoid(X, Y)
     freq = f(index);
     
     
-    % plot singled-sided transform
-    figure
-    plot(f, 2 * abs(YFT_single))
-    xlabel('Frequency (GHz)')
-    ylabel('Density')
-    title('Fourier Transformed Signal')
+%     % plot singled-sided transform
+%     figure
+%     plot(f, 2 * abs(YFT_single))
+%     xlabel('Frequency (GHz)')
+%     ylabel('Density')
+%     title('Fourier Transformed Signal')
     
     fit = zeros(1, length(X)); % dummy value assigned for now
     

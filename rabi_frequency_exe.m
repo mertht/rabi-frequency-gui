@@ -29,7 +29,7 @@ function rabi_frequency_exe()
     % set paths
     SPINAPI_DLL_PATH = 'C:\SpinCore\SpinAPI\lib\';
     SPINAPI_DLL_NAME = 'spinapi64';
-    EXPORTED_DATA_PATH = '/Exported_Data';
+    EXPORTED_DATA_PATH = './Exported_Data/';
     
     % Choose default command line output for pulse_blaster_gui
     if libisloaded(SPINAPI_DLL_NAME) ~= 1
@@ -53,9 +53,8 @@ function rabi_frequency_exe()
     end
     
     % check if exported data folder exists
-    pathname = strcat('.', EXPORTED_DATA_PATH);
-    if (exist(pathname, 'dir') == 7)
-        addpath(pathname);
+    if (exist(EXPORTED_DATA_PATH, 'dir') == 7)
+        addpath(EXPORTED_DATA_PATH);
     else
         error('Cannot find %s folder', pathname);
     end

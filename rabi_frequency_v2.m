@@ -62,6 +62,13 @@ guidata(hObject, handles);
 % uiwait(handles.figure1);
 
 
+%% FINAL CHANGES TO GUI
+axes(handles.sinusoid)
+title('Rabi Oscillation')
+xlabel('RF Pulse Duration (ns)')
+ylabel('Normalized PL (arb.)')
+
+
 % --- Outputs from this function are returned to the command line.
 function varargout = rabi_frequency_v2_OutputFcn(hObject, eventdata, handles) 
 % varargout  cell array for returning output args (see VARARGOUT);
@@ -75,6 +82,18 @@ varargout{1} = handles.output;
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 % --- Executes on button press in start.
 function start_Callback(hObject, eventdata, handles)
 % hObject    handle to start (see GCBO)
@@ -84,6 +103,9 @@ function start_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of start
     global EXPORTED_DATA_PATH;
     clc
+    cla(handles.sinusoid)
+    cla(handles.pic_frame)
+    
     % program and execute Rabi measurement sequence
     [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles);
     
@@ -92,19 +114,32 @@ function start_Callback(hObject, eventdata, handles)
     save(strcat(EXPORTED_DATA_PATH, 'image_array.mat'), 'image_array');
     save(strcat(EXPORTED_DATA_PATH, 'rf_durations.mat'), 'rf_durations');
     save(strcat(EXPORTED_DATA_PATH, 'pl_array.mat'), 'pl_array');
+
+    process_rabi_data(handles);
     
-    % plot expected sinusoidal curve of Rabi oscillations
-    axes(handles.sinusoid);
-    cla(handles.sinusoid);
-    hold on
-    plot(rf_durations, pl_array);
-    xlabel('RF Pulse Duration (ns)')
-    ylabel('Normalized PL (arb.)')
+    
+function process_rabi_data(handles)
+    [image_array_mat] = load('image_array.mat');
+    [pl_array_mat] = load('pl_array.mat');
+    [rf_durations_mat] = load('rf_durations.mat');
+
+    % get data from loaded values
+    image_array = image_array_mat.image_array;
+    pl_array = pl_array_mat.pl_array;
+    rf_durations = rf_durations_mat.rf_durations;
     
     % calculate and set empirical Rabi frequency
     [~,rabi_freq] = fit_sinusoid(rf_durations, pl_array);
     output = strcat(num2str(rabi_freq), ' GHz');
     set(handles.freq_output, 'String', output);
+
+    
+
+
+
+
+
+
 
 
 

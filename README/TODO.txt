@@ -2,6 +2,7 @@ RABI GUI TO DO:
 - MATLAB gets fatal error upon pb_stop() in command line... why?
 - add options for exporting graphs, data, etc.
 - figure out why Matlab fatal error occurs when stopping pulse blaster after closing
+- transfer PB programming to Harware and account for laser response offset in pulsed experiments
 
 EXTRA STUFF
 - add image to gui instead of creating new figures

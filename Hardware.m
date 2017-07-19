@@ -116,8 +116,6 @@ classdef Hardware < handle
             catch ME
                 error('turn on Hamamatsu camera!')
             end
-            
-            
                 
             src                         = getselectedsource(obj.vid);
             MAX_EXPOSURE_TIME           = 1;

@@ -18,12 +18,6 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     % rf pulse:
     %       _______|'''|______|'''|______|'''|
     
-    % get constants
-    LASER_ON = Hardware.LASER_ON;
-    RF_ON = Hardware.RF_ON;
-    ALL_OFF = Hardware.ALL_OFF;
-    global REGION_WIDTH;
-    
     %% GET USER PARAMETERS
     
     % get pulse parameters from gui text fields
@@ -56,9 +50,9 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     hardware.init(binning_index, ccd_size_index, total_t_laser, rf_frequency, rf_power);
     
     pb_start_programming('PULSE_PROGRAM'); % get pb ready
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, hardware.laser_response); % account for time delay (fiber optic + camera launch)
-    pb_inst_pbonly(LASER_ON, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
+    pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, hardware.laser_response); % account for time delay (fiber optic + camera launch)
+    pb_inst_pbonly(Hardware.LASER_ON, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
+    pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
     pb_stop_programming();    
     
     disp('running RF off counts measurement')
@@ -78,9 +72,9 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
     hardware.init(binning_index, ccd_size_index, total_t_laser, rf_frequency, rf_power);
     
     pb_start_programming('PULSE_PROGRAM'); % get pb ready
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, hardware.laser_response); % account for time delay (fiber optic + camera launch)
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
-    pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
+    pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, hardware.laser_response); % account for time delay (fiber optic + camera launch)
+    pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, t_laser); % continuous laser beam for background image
+    pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
     pb_stop_programming();
     
     disp('running background counts measurement')
@@ -118,10 +112,10 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
         
         % program pb
         pb_start_programming('PULSE_PROGRAM'); % get pb ready        
-        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, hardware.laser_response); % account for time delay (fiber optic + camera launch)   
-        start_laser = pb_inst_pbonly(LASER_ON, 'LOOP', cycles, t_laser); % turn laser pulse on, rf off
-        pb_inst_pbonly(RF_ON, 'END_LOOP', start_laser, t_rf); % turn rf pulse on, laser off
-        pb_inst_pbonly(ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
+        pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, hardware.laser_response); % account for time delay (fiber optic + camera launch)   
+        start_laser = pb_inst_pbonly(Hardware.LASER_ON, 'LOOP', cycles, t_laser); % turn laser pulse on, rf off
+        pb_inst_pbonly(Hardware.RF_ON, 'END_LOOP', start_laser, t_rf); % turn rf pulse on, laser off
+        pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, 100); % zero pins after completions
         pb_stop_programming();
 
         % run pulsed sequence and gather image

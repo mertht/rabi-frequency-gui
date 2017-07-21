@@ -4,41 +4,40 @@ classdef Hardware < handle
     %   -RF sweeper
     %   -DAQ channels
     %   -Image acquisition
+    %   -Pulseblaster
     % 
     % Only one Hardware object needs to be created for a GUI; simply kill()
     % and redo the init() call to re-program the hardware.
     
     
     properties
-        rf_sweeper          % rf_sweeper object (through DAQ)
-        vid                 % camera object
-        s                   % DAQ session object
-        is_initialized      % boolean flag; '1' if this is already initialized
-        exposure_time_sec   % exposure time of shot in seconds
-        rf_frequency        % frequency to drive RF in GHz
-        rf_power            % RF power in dBm
-        ccd_size            % image resolution
-        capture_taken       % boolean flag; '1' if a picture was taken with this initialized object
-        laser_response      % time delay between Pulseblaster signal and laser response at table
+        rf_sweeper                      % rf_sweeper object (through DAQ)
+        vid                             % camera object
+        s                               % DAQ session object
+        is_initialized                  % boolean flag; '1' if this is already initialized
+        exposure_time_sec               % exposure time of shot in seconds
+        rf_frequency                    % frequency to drive RF in GHz
+        rf_power                        % RF power in dBm
+        ccd_size                        % image resolution
+        capture_taken                   % boolean flag; '1' if a picture was taken with this initialized object
+        laser_response                  % time delay between Pulseblaster signal and laser response at table
     end
     
     properties (Constant)
-        CAMERA_DELAY = 10;  % delay between start of Pulseblaster pulses and camera shutter opening (ns)
-        SPEED_OF_LIGHT = 2.997 * 10^8; % empirical constant
-        INDEX_OF_REFRACTION = 1.44; % index of refraction in fiber optic cable
-        CABLE_LENGTH = 32; % length of fiber optic cable (to AOM) in meters
+        CAMERA_DELAY = 50;              % delay between start of Pulseblaster pulses and camera shutter opening (ns)
+        LASER_RESPONSE = 100;           % delay between pulseblaster trigger and deflection of beam at diamond
         
         % Hamamatsu camera constants (from model)
-        DARK_OFFSET = 100; % hamamatsu dark offset: 100 extra counts each time a picture is taken
-        CONVERSION_FACTOR = 0.46; % hamamatsu average photons/count
+        DARK_OFFSET = 100;              % hamamatsu dark offset: 100 extra counts each time a picture is taken
+        CONVERSION_FACTOR = 0.46;       % hamamatsu average photons/count
         
         % Hex flags corresponding to Pulseblaster output
-        ALL_OFF = '0';      % hex pin for rf output pulse
-        LASER_ON = '1';     % hex pin for laser output pulse (pin 0)
-        RF_ON = '2';        % hex pin for rf output pulse (pin 1)
+        ALL_OFF = 0;                    % hex pin for rf output pulse
+        LASER_ON = 1;                   % hex pin for laser output pulse (pin 0)
+        RF_ON = 2;                      % hex pin for rf output pulse (pin 1)
         
-        CORE_CLOCK = 100;   % this specific model of Pulseblaster (SP17) has 100 MHz clock freq.
-        MIN_INSTR_LENGTH = 10; % minimum allowed instruction length of Pulseblaster (ns)
+        CORE_CLOCK = 100;               % this specific model of Pulseblaster (SP17) has 100 MHz clock freq.
+        MIN_INSTR_LENGTH = 10;          % minimum allowed instruction length of Pulseblaster (ns)
     end
     
     methods
@@ -56,14 +55,16 @@ classdef Hardware < handle
             
             
             %% ENSURE OLD VIDEO OBJECTS ARE DELETED
-            delete(imaqfind)
+            % commented out for now because image preview (Image Acquisition)
+            % shuts off when reset.
+%             delete(imaqfind)
+%             daqreset
             
             %% SET OBJECT FIELDS
             % see "Properties" for description of fields
             obj.exposure_time_sec = exposure_time * 10^(-9);
             obj.rf_frequency = rf_frequency;
             obj.rf_power = rf_power;
-            obj.laser_response = Hardware.CABLE_LENGTH / (Hardware.SPEED_OF_LIGHT / Hardware.INDEX_OF_REFRACTION) * 10^9;
             
             %% SET UP RF SWEEPER
 
@@ -71,8 +72,8 @@ classdef Hardware < handle
 
             % Create the GPIB object if it does not exists
             if isempty(obj.rf_sweeper)
-                obj.rf_sweeper = gpib('NI', 0, 19);    %this is the key line. works without
-                                        % %the rest unless program halts or something
+                % this is the key line. works without the rest unless program halts or something
+                obj.rf_sweeper = gpib('NI', 0, 19);
             else
                 fclose(obj.rf_sweeper);
                 obj.rf_sweeper = obj.rf_sweeper(1);
@@ -80,15 +81,15 @@ classdef Hardware < handle
 
             
             try
-                fopen(obj.rf_sweeper);    %% Connect to rf generator object, obj.rf_sweeper. 
+                fopen(obj.rf_sweeper);    % Connect to rf generator object, obj.rf_sweeper. 
             catch ME
                 error('turn on the RF sweeper!')
             end
                 set(obj.rf_sweeper, 'Timeout', 2);
 
             fprintf(obj.rf_sweeper, 'PS0');                              % Sets power sweep mode off
-            fprintf(obj.rf_sweeper, 'CW %d GZ', obj.rf_frequency);           % Sets CW frequency 
-            fprintf(obj.rf_sweeper, 'PL %d DB', obj.rf_power);               % Sets the power level 
+            fprintf(obj.rf_sweeper, 'CW %d GZ', obj.rf_frequency);       % Sets CW frequency 
+            fprintf(obj.rf_sweeper, 'PL %d DB', obj.rf_power);           % Sets the power level 
             fprintf(obj.rf_sweeper, 'RF1');                              % Sets RF power on
 
             
@@ -126,10 +127,8 @@ classdef Hardware < handle
             
             src.ExposureTime            = obj.exposure_time_sec; % assign exposure time
             kinTime = obj.exposure_time_sec + obj.ccd_size/(2048/binning)*10E-3; % total time to take an image (inc. readout)
-
             obj.vid.FramesPerTrigger    = 1; 
             obj.vid.TriggerRepeat       = 1; % one image per trigger
-
             triggerconfig(obj.vid, 'hardware', 'RisingEdge', 'EdgeTrigger');
             obj.vid.ROIPosition         = ROIPosition; 
 
@@ -137,11 +136,9 @@ classdef Hardware < handle
             %% INITIALZE DAQ
             obj.s = daq.createSession('ni');
             addCounterOutputChannel(obj.s,'Dev1', 1, 'PulseGeneration'); % camera
-
             daq_camera_trigger_duty_cycle          = 0.50; % duty cycle of camera trigger
             daq_camera_trigger_inital_delay        = 0.0005;
             daq_camera_trigger_frequency           = 1/kinTime; 
-
             daq_rate                               = 50000; % daq read/write rate
             daq_duration                           = kinTime; % time daq is on
 
@@ -167,6 +164,7 @@ classdef Hardware < handle
         
         
         function image = capture(obj)
+            % With the initialized parameters, capture and return an image
             
             % check if this object is initialized
             if not(obj.is_initialized)
@@ -182,19 +180,19 @@ classdef Hardware < handle
 
             % trigger Pulseblaster sequence    
             pb_start();
+            
+            % actually capture image... note that this command also acts as
+            % pause(exposure_time) and ensures that the pulseblaster has
+            % completed its sequence
             [~,~] = obj.s.startForeground();
-
+            obj.s.wait();
+            
+            % stop objects
             stop(obj.vid)
+            pb_stop();
 
             % now get images from camera
-            rawCameraImages = double(getdata(obj.vid, obj.vid.TriggerRepeat));
-
-            % check if pulseblaster is still running
-            running = bitand(pb_read_status(), 4);
-
-
-            % post-process image
-            image = rawCameraImages;
+            image = double(getdata(obj.vid, obj.vid.TriggerRepeat));
 
             % print out Pulseblaster exit status
             status = num2str(pb_read_status());
@@ -231,7 +229,6 @@ classdef Hardware < handle
             %% KILL DAQ AND RF SWEEPER
             obj.s.release; % release the daq instance
             delete(obj.s) % delete the daq instance
-
             fprintf(obj.rf_sweeper, 'RS');      % reset the instrument
             fprintf(obj.rf_sweeper, 'CS');      % clear status
             fprintf(obj.rf_sweeper, 'CS');      % clear status
@@ -249,11 +246,11 @@ classdef Hardware < handle
     
     methods(Static)
         
-        function photons = counts2photons(camera_counts, rf_off_counts)
+        function photons = counts2photons(camera_counts)
             % converts counts (from Hamamatsu camera) to photons
             % camera counts: number of counts over integration region
             % rf_off_counts: measured counts during laser excitation integration with RF off
-                actual_counts = camera_counts - (Hardware.DARK_OFFSET + rf_off_counts);
+                actual_counts = camera_counts - (Hardware.DARK_OFFSET);
                 photons = actual_counts * Hardware.CONVERSION_FACTOR;
         end
         

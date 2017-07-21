@@ -3,13 +3,8 @@ function rabi_frequency_exe()
     % parameters.
     % The Pulseblaster used by this program is version SP17.
     
-    
     clc
-
     
-    % ensure hardware is not already instantiated
-    delete(instrfind)
-    daqreset
     if exist('hardware', 'var') == 1 % kill most recent 
         hardware.kill();
         disp('killed old hardware object')

@@ -25,7 +25,13 @@ classdef Hardware < handle
     
     properties (Constant)
         CAMERA_DELAY = 50;              % delay between start of Pulseblaster pulses and camera shutter opening (ns)
-        LASER_RESPONSE = 100;           % delay between pulseblaster trigger and deflection of beam at diamond
+        LASER_RESPONSE = 313;           % delay between pulseblaster trigger and actual deflection of beam at diamond
+        % calculated via the constants:
+            % AOM BNC cable/fiber optic length = 32 meters
+            % speed of light in BNC = 2/3 * c
+            % speed of light in fiber optic = c / 1.44
+            % therefore LASER_RESPONSE = 32 / (c * 2/3) + 32 / (c / 1.44)
+        
         
         % Hamamatsu camera constants (from model)
         DARK_OFFSET = 100;              % hamamatsu dark offset: 100 extra counts each time a picture is taken
@@ -245,6 +251,12 @@ classdef Hardware < handle
     end
     
     methods(Static)
+        
+        function program_rabi_loop()
+            
+        
+        end
+            
         
         function photons = counts2photons(camera_counts)
             % converts counts (from Hamamatsu camera) to photons

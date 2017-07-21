@@ -101,17 +101,14 @@ function [image_array, rf_durations, pl_array] = rabi_pulse_sequence(handles)
         hardware = Hardware;
         hardware.init(binning_index, ccd_size_index, exposure_time, rf_frequency, rf_power);
         disp('running pulse sequence')
-
         
-        
-        % Old pulse instruction; does not account for delay of AOM (laser)
-        pb_start_programming('PULSE_PROGRAM'); % get pb ready
-        pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, Hardware.CAMERA_DELAY); % account for time delay (fiber optic + camera launch)
-        start_laser = pb_inst_pbonly(Hardware.LASER_ON, 'LOOP', cycles, t_laser); % laser pulse on
-        pb_inst_pbonly(Hardware.RF_ON, 'END_LOOP', start_laser, t_rf); % turn rf pulse on, laser off
-        pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, Hardware.MIN_INSTR_LENGTH); % zero pins after completions
-        pb_stop_programming();
-        
+%         % Old pulse instruction; does not account for delay of AOM (laser)
+%         pb_start_programming('PULSE_PROGRAM'); % get pb ready
+%         pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, Hardware.CAMERA_DELAY); % account for time delay (fiber optic + camera launch)
+%         start_laser = pb_inst_pbonly(Hardware.LASER_ON, 'LOOP', cycles, t_laser); % laser pulse on
+%         pb_inst_pbonly(Hardware.RF_ON, 'END_LOOP', start_laser, t_rf); % turn rf pulse on, laser off
+%         pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, Hardware.MIN_INSTR_LENGTH); % zero pins after completions
+%         pb_stop_programming();
         
         % New pulse sequence that accounts for delay of AOM (laser)
         both_on = bitor(Hardware.LASER_ON, Hardware.RF_ON); % hex flag to signal both RF and laser to turn on

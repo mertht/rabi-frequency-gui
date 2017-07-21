@@ -25,12 +25,7 @@ classdef Hardware < handle
     
     properties (Constant)
         CAMERA_DELAY = 50;              % delay between start of Pulseblaster pulses and camera shutter opening (ns)
-        LASER_RESPONSE = 313;           % delay between pulseblaster trigger and actual deflection of beam at diamond
-        % calculated via the constants:
-            % AOM BNC cable/fiber optic length = 32 meters
-            % speed of light in BNC = 2/3 * c
-            % speed of light in fiber optic = c / 1.44
-            % therefore LASER_RESPONSE = 32 / (c * 2/3) + 32 / (c / 1.44)
+        LASER_RESPONSE = 840;           % measured delay between pulseblaster trigger and actual deflection of beam at diamond
         
         
         % Hamamatsu camera constants (from model)
@@ -43,7 +38,7 @@ classdef Hardware < handle
         RF_ON = 2;                      % hex pin for rf output pulse (pin 1)
         
         CORE_CLOCK = 100;               % this specific model of Pulseblaster (SP17) has 100 MHz clock freq.
-        MIN_INSTR_LENGTH = 10;          % minimum allowed instruction length of Pulseblaster (ns)
+        MIN_INSTR_LENGTH = 50;          % minimum allowed instruction length of Pulseblaster (ns)
     end
     
     methods
@@ -88,7 +83,7 @@ classdef Hardware < handle
             
             try
                 fopen(obj.rf_sweeper);    % Connect to rf generator object, obj.rf_sweeper. 
-            catch ME
+            catch ME_OUTSIDE
                 error('turn on the RF sweeper!')
             end
                 set(obj.rf_sweeper, 'Timeout', 2);
@@ -182,7 +177,7 @@ classdef Hardware < handle
 
             %% TAKE PIX
             start(obj.vid);
-            pause(0.25);
+            pause(0.25); % may not be necessary?
 
             % trigger Pulseblaster sequence    
             pb_start();
@@ -192,10 +187,12 @@ classdef Hardware < handle
             % completed its sequence
             [~,~] = obj.s.startForeground();
             obj.s.wait();
+            obj.s.stop();
+            
             
             % stop objects
             stop(obj.vid)
-            pb_stop();
+            pb_stop()
 
             % now get images from camera
             image = double(getdata(obj.vid, obj.vid.TriggerRepeat));
@@ -224,7 +221,6 @@ classdef Hardware < handle
             % called after init() and measurement_script() to kill current
             % hardware connections
             
-            
             if obj.is_initialized == 0
                 error('Hardware is not initialized')
             end
@@ -252,11 +248,23 @@ classdef Hardware < handle
     
     methods(Static)
         
-        function program_rabi_loop()
+        function program_rabi_loop(t_laser, t_rf, cycles)
+            both_on = bitor(Hardware.LASER_ON, Hardware.RF_ON); % hex flag to signal both RF and laser to turn on
+            pb_start_programming('PULSE_PROGRAM'); % get pb ready
+            pb_inst_pbonly(Hardware.ALL_OFF, 'CONTINUE', 0, Hardware.CAMERA_DELAY); % account for time delay (fiber optic + camera launch)
             
-        
+            
+            
+            % New pulse sequence that accounts for delay of AOM (laser)
+            pb_inst_pbonly(Hardware.LASER_ON, 'CONTINUE', 0, t_laser); % turn laser pulse on
+            start_loop = pb_isnt_pbonly(Hardware.ALL_OFF, 'LOOP', cycles - 1, Hardware.LASER_RESPONSE); % account for delay in laser response (fiber optic cable)
+            pb_inst_pbonly(Hardware.RF_ON, 'CONTINUE', 0, t_rf - Hardware.LASER_RESPONSE); % turn rf pulse on
+            pb_inst_pbonly(both_on, 'CONTINUE', 0, Hardware.LASER_RESPONSE); % pulses overlap because of laser_response delay
+            pb_inst_pbonly(Hardware.LASER_ON, 'END_LOOP', start_loop, t_laser - Hardware.LASER_RESPONSE); % readout/pump laser
+            pb_inst_pbonly(Hardware.ALL_OFF, 'STOP', 0, Hardware.MIN_INSTR_LENGTH); % zero pins after completions
+            pb_stop_programming();
         end
-            
+
         
         function photons = counts2photons(camera_counts)
             % converts counts (from Hamamatsu camera) to photons
@@ -265,6 +273,5 @@ classdef Hardware < handle
                 actual_counts = camera_counts - (Hardware.DARK_OFFSET);
                 photons = actual_counts * Hardware.CONVERSION_FACTOR;
         end
-        
     end
 end

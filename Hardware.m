@@ -15,10 +15,10 @@ classdef Hardware < handle
         vid                             % camera object
         s                               % DAQ session object
         is_initialized                  % boolean flag; '1' if this is already initialized
-        exposure_time_sec               % exposure time of shot in seconds
+        exposure_time_sec               % exposure time of image in seconds
         rf_frequency                    % frequency to drive RF in GHz
         rf_power                        % RF power in dBm
-        ccd_size                        % image resolution
+        ccd_size                        % image size
         capture_taken                   % boolean flag; '1' if a picture was taken with this initialized object
         laser_response                  % time delay between Pulseblaster signal and laser response at table
     end
@@ -201,6 +201,16 @@ classdef Hardware < handle
             status = num2str(pb_read_status());
             message = strcat('pb exit status:  ', status);
             disp(message);
+        end
+        
+        
+        function average_image = capture_average(obj, n_average)
+            % Takes 'n_average' pictures and returns the average
+            image = zeros(obj.get_image_size(), obj.get_image_size());
+            for d = 1:n_average
+                image = image + obj.capture();
+            end
+            average_image = image / n_average;
         end
         
         

@@ -27,9 +27,8 @@ classdef Hardware < handle
         CAMERA_DELAY = 50;              % delay between start of Pulseblaster pulses and camera shutter opening (ns)
         LASER_RESPONSE = 840;           % measured delay between pulseblaster trigger and actual deflection of beam at diamond
         
-        
         % Hamamatsu camera constants (from model)
-        DARK_OFFSET = 100;              % hamamatsu dark offset: 100 extra counts each time a picture is taken
+        DARK_OFFSET = 106;              % hamamatsu dark offset: 100 extra counts each time a picture is taken
         CONVERSION_FACTOR = 0.46;       % hamamatsu average photons/count
         
         % Hex flags corresponding to Pulseblaster output
@@ -192,15 +191,15 @@ classdef Hardware < handle
             
             % stop objects
             stop(obj.vid)
-            pb_stop()
-
-            % now get images from camera
-            image = double(getdata(obj.vid, obj.vid.TriggerRepeat));
-
+            
             % print out Pulseblaster exit status
             status = num2str(pb_read_status());
             message = strcat('pb exit status:  ', status);
             disp(message);
+
+            % now get images from camera, subtracting camera dark offset
+            image = double(getdata(obj.vid, obj.vid.TriggerRepeat)) - Hardware.DARK_OFFSET;
+
         end
         
         
@@ -250,7 +249,6 @@ classdef Hardware < handle
             obj.is_initialized = 0;
             
             %% KILL PULSEBLASTER
-            pb_stop();
             pb_close();
             
         end

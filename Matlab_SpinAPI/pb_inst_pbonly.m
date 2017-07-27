@@ -46,8 +46,14 @@ switch inst
 		op_code = 8;
 end
 
-
-inst_addr = calllib(SPINAPI_DLL_NAME,'pb_inst_pbonly',num_flags,op_code,inst_data,length);
+if length < 0
+    error('negative instruction length')
+elseif length < Hardware.MIN_INSTR_LENGTH
+    warning('unable to program instruction. timing error may result')
+    inst_addr = -2;
+else
+    inst_addr = calllib(SPINAPI_DLL_NAME,'pb_inst_pbonly',num_flags,op_code,inst_data,length);
+end
 
 
 
